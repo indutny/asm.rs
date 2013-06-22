@@ -1,15 +1,15 @@
-use masm::*;
+use asm::*;
 use std::libc::*;
 use std::ptr;
 use std::cast;
 use std::vec;
 
-pub struct Masm {
+pub struct Asm {
   buffer: ~[u8],
   infos: ~[RelocationInfo]
 }
 
-impl MasmBuffer for Masm {
+impl AsmBuffer for Asm {
   fn emitb(&mut self, b: u8) {
     self.buffer.push(b);
   }
@@ -29,8 +29,8 @@ impl MasmBuffer for Masm {
     self.emitl(((q >> 32) & 0xffff_ffff) as u32);
   }
 
-  fn offset(&self) -> MasmOffset {
-    MasmOffset(self.buffer.len())
+  fn offset(&self) -> AsmOffset {
+    AsmOffset(self.buffer.len())
   }
 
   fn relocate(&mut self, info: &RelocationInfo) {
@@ -51,9 +51,9 @@ fn round_up(x: c_long, f: c_long) -> c_long {
   }
 }
 
-impl Masm {
-  pub fn new() -> Masm {
-    Masm { buffer: ~[], infos: ~[] }
+impl Asm {
+  pub fn new() -> Asm {
+    Asm { buffer: ~[], infos: ~[] }
   }
 
   pub fn execute(&self, arg: uint) -> uint {

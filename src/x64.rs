@@ -1,4 +1,4 @@
-use masm::*;
+use asm::*;
 
 pub enum Operand {
   Empty,
@@ -56,20 +56,27 @@ enum REXKind {
   REXW
 }
 
-trait MasmX64Helper {
+trait AsmX64Helper {
   fn emit_modrm(&mut self, r: Operand, rm: Operand);
   fn emit_rex(&mut self, kind: REXKind, r: Operand, rm: Operand);
   fn emit_opt_rex(&mut self, kind: REXKind, r: Operand, rm: Operand);
 }
 
-pub trait MasmX64 {
+pub trait AsmX64 {
+  // Debug
   fn nop(&mut self);
   fn int3(&mut self);
+
+  // Basics
   fn pushq(&mut self, op: Operand);
   fn popq(&mut self, op: Operand);
-  fn movq(&mut self, dst: Operand, src: Operand);
-  fn addq(&mut self, dst: Operand, src: Operand);
   fn ret(&mut self, r: Operand);
+  fn movq(&mut self, dst: Operand, src: Operand);
+
+  // Math
+  fn addq(&mut self, dst: Operand, src: Operand);
+  fn subq(&mut self, dst: Operand, src: Operand);
+
 }
 
 impl Register {
@@ -112,7 +119,7 @@ impl Operand {
   }
 }
 
-impl<M: MasmBuffer> MasmX64Helper for M {
+impl<M: AsmBuffer> AsmX64Helper for M {
   fn emit_modrm(&mut self, r: Operand, rm: Operand) {
     assert!(r.is_reg() || r.is_dreg() || r.is_operation());
     let rbit = r.low() << 3;
@@ -152,7 +159,7 @@ impl<M: MasmBuffer> MasmX64Helper for M {
   }
 }
 
-impl<M: MasmBuffer+MasmX64Helper> MasmX64 for M {
+impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
   fn nop(&mut self) { self.emitb(0x90); }
   fn int3(&mut self) { self.emitb(0xcc); }
 
@@ -223,10 +230,10 @@ impl<M: MasmBuffer+MasmX64Helper> MasmX64 for M {
 
   fn addq(&mut self, dst: Operand, src: Operand) {
     match (dst, src) {
-      (R(rax), Word(w)) => {
+      (R(rax), Long(l)) => {
         self.emit_rex(REXW, Empty, Empty);
         self.emitb(0x05);
-        self.emitw(w);
+        self.emitl(l);
       },
       (_, Byte(b)) => {
         self.emit_rex(REXW, dst, src);
@@ -234,11 +241,11 @@ impl<M: MasmBuffer+MasmX64Helper> MasmX64 for M {
         self.emit_modrm(_Operation(0), dst);
         self.emitb(b);
       },
-      (_, Word(w)) => {
+      (_, Long(l)) => {
         self.emit_rex(REXW, dst, src);
         self.emitb(0x81);
         self.emit_modrm(_Operation(0), dst);
-        self.emitw(w);
+        self.emitl(l);
       },
       (R(_), _) if src.is_rm() => {
         self.emit_rex(REXW, dst, src);
@@ -249,6 +256,37 @@ impl<M: MasmBuffer+MasmX64Helper> MasmX64 for M {
         self.emit_rex(REXW, src, dst);
         self.emitb(0x01);
         self.emit_modrm(src, dst);
+      },
+      _ => fail!()
+    }
+  }
+
+  fn subq(&mut self, dst: Operand, src: Operand) {
+    match (dst, src) {
+      (R(rax), Long(l)) => {
+        self.emit_rex(REXW, Empty, Empty);
+        self.emitb(0x2d);
+        self.emitl(l);
+      },
+      (_, Byte(b)) => {
+        self.emit_rex(REXW, dst, src);
+        self.emitb(0x83);
+        self.emit_modrm(_Operation(5), dst);
+        self.emitb(b);
+      },
+      (_, Long(l)) => {
+        self.emit_rex(REXW, dst, src);
+        self.emitb(0x81);
+        self.emit_modrm(_Operation(5), dst);
+        self.emitl(l);
+      },
+      (R(_), _) if src.is_rm() => {
+        self.emit_rex(REXW, dst, src);
+        self.emitb(0x2b);
+        self.emit_modrm(dst, src);
+      },
+      (_, R(_)) if dst.is_rm() => {
+        fail!("You can only substract r32 from rm");
       },
       _ => fail!()
     }

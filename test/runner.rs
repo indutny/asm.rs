@@ -1,13 +1,13 @@
-use masm::*;
-use masm::x64::*;
+use asm::*;
+use asm::x64::*;
 use common::*;
 
-#[path="../src/masm.rs"]
-mod masm;
+#[path="../src/asm.rs"]
+mod asm;
 mod common;
 
-fn run_test(arg: uint, expected: uint, test: &fn(m: &mut Masm)) {
-  let mut m = ~Masm::new();
+fn run_test(arg: uint, expected: uint, test: &fn(m: &mut Asm)) {
+  let mut m = ~Asm::new();
   test(m);
 
   assert!(m.execute(arg) == expected);
@@ -15,12 +15,35 @@ fn run_test(arg: uint, expected: uint, test: &fn(m: &mut Masm)) {
 
 #[test]
 fn in_and_out() {
-  do run_test(0x10ff, 0x1104) |m| {
+  do run_test(13589, 13589) |m| {
     m.pushq(R(rbp));
     m.movq(R(rbp), R(rsp));
 
     m.movq(R(rax), R(rsi));
-    m.addq(R(rax), Byte(5));
+
+    m.movq(R(rsp), R(rbp));
+    m.popq(R(rbp));
+    m.ret(Empty);
+  };
+}
+
+#[test]
+fn math() {
+  do run_test(13589, 40789) |m| {
+    m.pushq(R(rbp));
+    m.movq(R(rbp), R(rsp));
+
+    // Reserve some space on stack
+    m.subq(R(rsp), Byte(8));
+
+    // And work with it
+    m.movq(M(rbp, -8), R(rsi));
+    m.addq(M(rbp, -8), Long(5));
+    m.movq(R(rbx), M(rbp, -8));
+    m.addq(R(rbx), M(rbp, -8));
+    m.addq(R(rbx), Byte(7));
+    m.movq(R(rax), R(rbx));
+    m.addq(R(rax), M(rbp, -8));
 
     m.movq(R(rsp), R(rbp));
     m.popq(R(rbp));

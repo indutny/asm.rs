@@ -4,7 +4,7 @@ RUSTFLAGS ?=
 TEST_BINARY ?= ./run-tests
 
 SRC ?=
-SRC += src/masm.rs
+SRC += src/asm.rs
 SRC += src/x64.rs
 
 TEST_SRC ?=
