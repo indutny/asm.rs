@@ -79,7 +79,9 @@ impl Asm {
         match info.kind {
           RelocAbsolute => {
             assert!(info.size == RelocQuad);
-            fail!("Not implemented yet");
+            let to_abs = (addr as u64) + to as u64;
+            let p: *mut u64 = cast::transmute(bmap.offset(from));
+            *p = to_abs;
           },
           RelocRelative => {
             let delta = (to as int) - (from as int) + info.nudge;

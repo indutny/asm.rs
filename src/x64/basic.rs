@@ -4,6 +4,7 @@ use asm::x64::base::*;
 pub trait AsmX64Basic {
   fn movq(&mut self, dst: Operand, src: Operand);
   fn movqzx(&mut self, dst: Operand, src: Operand);
+  fn movq_proc(&mut self, dst: Operand, l: &mut Label);
   fn xchgq(&mut self, dst: Operand, src: Operand);
   fn pushq(&mut self, op: Operand);
   fn popq(&mut self, op: Operand);
@@ -53,6 +54,17 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64Basic for A {
         self.emitb(0xb7);
         self.emit_modrm(dst, src);
         self.emitw(w);
+      },
+      _ => fail!()
+    }
+  }
+
+  fn movq_proc(&mut self, dst: Operand, l: &mut Label) {
+    match dst {
+      R(_) => {
+        self.emit_rex(REXW, dst, Empty);
+        self.emitb(0xb8 | dst.low());
+        self.emit_use(l, RelocAbsolute, RelocQuad, 0);
       },
       _ => fail!()
     }

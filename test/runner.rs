@@ -82,3 +82,33 @@ fn branching() {
     m.ret(Empty);
   };
 }
+
+#[test]
+fn proc() {
+  do run_test(0, 123) |m| {
+    let mut proc = Label::new();
+
+    m.pushq(R(rbp));
+    m.movq(R(rbp), R(rsp));
+
+    m.movq_proc(R(rax), &mut proc);
+    m.callq(R(rax));
+
+    m.movq(R(rsp), R(rbp));
+    m.popq(R(rbp));
+    m.ret(Empty);
+
+    m.int3();
+
+    // Subproc
+    m.bind(&mut proc);
+    m.pushq(R(rbp));
+    m.movq(R(rbp), R(rsp));
+
+    m.movq(R(rax), Long(123));
+
+    m.movq(R(rsp), R(rbp));
+    m.popq(R(rbp));
+    m.ret(Empty);
+  };
+}
