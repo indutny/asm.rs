@@ -6,6 +6,10 @@ TEST_BINARY ?= ./run-tests
 SRC ?=
 SRC += src/asm.rs
 SRC += src/x64.rs
+SRC += src/x64/base.rs
+SRC += src/x64/basic.rs
+SRC += src/x64/math.rs
+SRC += src/x64/branching.rs
 
 TEST_SRC ?=
 TEST_SRC += test/common.rs
