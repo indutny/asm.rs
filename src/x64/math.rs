@@ -8,6 +8,8 @@ pub trait AsmX64Math {
   fn subq(&mut self, dst: Operand, src: Operand);
   fn divq(&mut self, src: Operand);
   fn mulq(&mut self, src: Operand);
+  fn idivq(&mut self, src: Operand);
+  fn imulq(&mut self, src: Operand);
   fn shlq(&mut self, dst: Operand, src: Operand);
   fn shrq(&mut self, dst: Operand, src: Operand);
   fn sarq(&mut self, dst: Operand, src: Operand);
@@ -105,6 +107,20 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64Math for A {
     self.emit_rex(REXW, Empty, src);
     self.emitb(0xf7);
     self.emit_modrm(_Operation(4), src);
+  }
+
+  fn idivq(&mut self, src: Operand) {
+    assert!(src.is_rm());
+    self.emit_rex(REXW, Empty, src);
+    self.emitb(0xf7);
+    self.emit_modrm(_Operation(7), src);
+  }
+
+  fn imulq(&mut self, src: Operand) {
+    assert!(src.is_rm());
+    self.emit_rex(REXW, Empty, src);
+    self.emitb(0xf7);
+    self.emit_modrm(_Operation(5), src);
   }
 
   fn shlq(&mut self, dst: Operand, src: Operand) {
