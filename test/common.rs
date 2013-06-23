@@ -71,6 +71,44 @@ impl Asm {
                        vec::raw::to_ptr(self.buffer),
                        self.buffer.len());
 
+      let bmap: *mut u8 = cast::transmute(addr);
+      for self.infos.iter().advance |info| {
+        let AsmOffset(from) = info.from;
+        let AsmOffset(to) = info.to;
+
+        match info.kind {
+          RelocAbsolute => {
+            assert!(info.size == RelocQuad);
+            fail!("Not implemented yet");
+          },
+          RelocRelative => {
+            let delta = (to as int) - (from as int) + info.nudge;
+            match info.size {
+              RelocByte => {
+                assert!(-127 <= delta && delta <= 128);
+                let p: *mut u8 = cast::transmute(bmap.offset(from));
+                *p = delta as u8;
+              },
+              RelocWord => {
+                assert!(-32767 <= delta && delta <= 32768);
+                let p: *mut u16 = cast::transmute(bmap.offset(from));
+                *p = delta as u16;
+              },
+              RelocLong => {
+                assert!(-8388607 <= delta && delta <= 8388608);
+                let p: *mut u32 = cast::transmute(bmap.offset(from));
+                *p = delta as u32;
+              },
+              RelocQuad => {
+                assert!(-2147483647 <= delta && delta <= 2147483648);
+                let p: *mut u64 = cast::transmute(bmap.offset(from));
+                *p = delta as u64;
+              }
+            }
+          }
+        }
+      };
+
       cast::transmute(addr)
     };
     f(arg)

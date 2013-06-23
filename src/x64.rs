@@ -51,12 +51,25 @@ pub enum DoubleRegister {
   xmm15 = 15
 }
 
+pub enum JumpCondition {
+  IfZero,
+  IfNotZero,
+  IfOverlow,
+  IfNoOverlow,
+  IfEqual,
+  IfNotEqual,
+  IfGreater,
+  IfLess,
+  IfGreaterOrEqual,
+  IfLessOrEqual
+}
+
 enum REXKind {
   REX,
   REXW
 }
 
-trait AsmX64Helper {
+pub trait AsmX64Helper {
   fn emit_modrm(&mut self, r: Operand, rm: Operand);
   fn emit_rex(&mut self, kind: REXKind, r: Operand, rm: Operand);
   fn emit_opt_rex(&mut self, kind: REXKind, r: Operand, rm: Operand);
@@ -74,9 +87,15 @@ pub trait AsmX64 {
   fn movq(&mut self, dst: Operand, src: Operand);
 
   // Math
+  fn incq(&mut self, dst: Operand);
+  fn decq(&mut self, dst: Operand);
   fn addq(&mut self, dst: Operand, src: Operand);
   fn subq(&mut self, dst: Operand, src: Operand);
 
+  // Branching
+  fn cmpq(&mut self, dst: Operand, src: Operand);
+  fn jmpl(&mut self, l: &mut Label);
+  fn jccl(&mut self, c: JumpCondition, l: &mut Label);
 }
 
 impl Register {
@@ -213,19 +232,31 @@ impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
         self.emitb(0x8b);
         self.emit_modrm(dst, src);
       },
+      (_, Long(l)) if dst.is_rm() => {
+        self.emit_rex(REXW, dst, src);
+        self.emitb(0xc7);
+        self.emit_modrm(_Operation(0), dst);
+        self.emitl(l);
+      },
       (R(_), Quad(q)) => {
         self.emit_rex(REXW, dst, src);
         self.emitb(0xb8 | dst.low());
         self.emitq(q);
       },
-      (M(_, _), Word(w)) => {
-        self.emit_rex(REXW, dst, src);
-        self.emitb(0xc7);
-        self.emit_modrm(_Operation(0), dst);
-        self.emitw(w);
-      },
       _ => fail!()
     }
+  }
+
+  fn incq(&mut self, dst: Operand) {
+    self.emit_rex(REXW, dst, Empty);
+    self.emitb(0xff);
+    self.emit_modrm(_Operation(0), dst);
+  }
+
+  fn decq(&mut self, dst: Operand) {
+    self.emit_rex(REXW, dst, Empty);
+    self.emitb(0xff);
+    self.emit_modrm(_Operation(1), dst);
   }
 
   fn addq(&mut self, dst: Operand, src: Operand) {
@@ -301,5 +332,60 @@ impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
       },
       _ => fail!()
     }
+  }
+
+  fn cmpq(&mut self, dst: Operand, src: Operand) {
+    match (dst, src) {
+      (R(rax), Long(l)) => {
+        self.emit_rex(REXW, Empty, Empty);
+        self.emitb(0x3d);
+        self.emitl(l);
+      },
+      (_, Byte(b)) => {
+        self.emit_rex(REXW, dst, src);
+        self.emitb(0x83);
+        self.emit_modrm(_Operation(7), dst);
+        self.emitb(b);
+      },
+      (_, Long(l)) => {
+        self.emit_rex(REXW, dst, src);
+        self.emitb(0x81);
+        self.emit_modrm(_Operation(7), dst);
+        self.emitl(l);
+      },
+      (R(_), _) if src.is_rm() => {
+        self.emit_rex(REXW, dst, src);
+        self.emitb(0x3b);
+        self.emit_modrm(dst, src);
+      },
+      (_, R(_)) if dst.is_rm() => {
+        self.emit_rex(REXW, src, dst);
+        self.emitb(0x39);
+        self.emit_modrm(src, dst);
+      },
+      _ => fail!()
+    }
+  }
+
+  fn jmpl(&mut self, l: &mut Label) {
+    self.emitb(0xe9);
+    self.emit_use(l, RelocRelative, RelocLong, -4);
+  }
+
+  fn jccl(&mut self, c: JumpCondition, l: &mut Label) {
+    self.emitb(0x0f);
+    self.emitb(match c {
+      IfZero => 0x84,
+      IfNotZero => 0x85,
+      IfOverlow => 0x80,
+      IfNoOverlow => 0x81,
+      IfEqual => 0x84,
+      IfNotEqual => 0x85,
+      IfGreater => 0x8f,
+      IfLess => 0x8c,
+      IfGreaterOrEqual => 0x8d,
+      IfLessOrEqual => 0x8e
+    });
+    self.emit_use(l, RelocRelative, RelocLong, -4);
   }
 }

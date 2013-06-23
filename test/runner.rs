@@ -50,3 +50,35 @@ fn math() {
     m.ret(Empty);
   };
 }
+
+#[test]
+fn branching() {
+  do run_test(100, 400) |m| {
+    m.pushq(R(rbp));
+    m.movq(R(rbp), R(rsp));
+
+    // Initialize output
+    m.movq(R(rax), Long(0));
+    m.movq(R(rcx), R(rsi));
+
+    let mut loop_start = Label::new();
+    let mut done = Label::new();
+
+    // Loop start
+    m.bind(&mut loop_start);
+    m.cmpq(R(rcx), Long(0));
+    m.jccl(IfEqual, &mut done);
+
+    // Loop body
+    m.addq(R(rax), Byte(4));
+    m.decq(R(rcx));
+
+    // Loop end
+    m.jmpl(&mut loop_start);
+    m.bind(&mut done);
+
+    m.movq(R(rsp), R(rbp));
+    m.popq(R(rbp));
+    m.ret(Empty);
+  };
+}
