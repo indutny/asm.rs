@@ -121,7 +121,7 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64Basic for A {
   fn popq(&mut self, op: Operand) {
     match op {
       R(_) => {
-        self.emit_rex(REXW, op, Empty);
+        self.emit_rex(REXW, Empty, op);
         self.emitb(0x58 | op.low());
       },
       M(_, _) => {
