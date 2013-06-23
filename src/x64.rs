@@ -91,11 +91,21 @@ pub trait AsmX64 {
   fn decq(&mut self, dst: Operand);
   fn addq(&mut self, dst: Operand, src: Operand);
   fn subq(&mut self, dst: Operand, src: Operand);
+  fn divq(&mut self, src: Operand);
+  fn mulq(&mut self, src: Operand);
+  fn shlq(&mut self, dst: Operand, src: Operand);
+  fn shrq(&mut self, dst: Operand, src: Operand);
+  fn sarq(&mut self, dst: Operand, src: Operand);
+  fn andq(&mut self, dst: Operand, src: Operand);
+  fn orq(&mut self, dst: Operand, src: Operand);
+  fn xorq(&mut self, dst: Operand, src: Operand);
 
   // Branching
+  fn testq(&mut self, dst: Operand, src: Operand);
   fn cmpq(&mut self, dst: Operand, src: Operand);
   fn jmpl(&mut self, l: &mut Label);
   fn jccl(&mut self, c: JumpCondition, l: &mut Label);
+  fn callq(&mut self, target: Operand);
 }
 
 impl Register {
@@ -185,12 +195,12 @@ impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
   fn pushq(&mut self, op: Operand) {
     match op {
       R(_) => {
-        self.emit_rex(REXW, op, Empty);
+        self.emit_rex(REXW, Empty, op);
         self.emitb(0xff);
         self.emit_modrm(_Operation(6), op);
       },
       M(_, _) => {
-        self.emit_rex(REXW, op, Empty);
+        self.emit_rex(REXW, Empty, op);
         self.emitb(0xff);
         self.emit_modrm(_Operation(6), op);
       },
@@ -207,13 +217,14 @@ impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
   }
 
   fn popq(&mut self, op: Operand) {
-    self.emit_rex(REXW, op, Empty);
     match op {
       R(_) => {
+        self.emit_rex(REXW, op, Empty);
         self.emitb(0x58 | op.low());
       },
       M(_, _) => {
         self.emitb(0x8f);
+        self.emit_rex(REXW, Empty, op);
         self.emit_modrm(_Operation(0), op);
       },
       _ => fail!()
@@ -233,7 +244,7 @@ impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
         self.emit_modrm(dst, src);
       },
       (_, Long(l)) if dst.is_rm() => {
-        self.emit_rex(REXW, dst, src);
+        self.emit_rex(REXW, Empty, dst);
         self.emitb(0xc7);
         self.emit_modrm(_Operation(0), dst);
         self.emitl(l);
@@ -248,13 +259,13 @@ impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
   }
 
   fn incq(&mut self, dst: Operand) {
-    self.emit_rex(REXW, dst, Empty);
+    self.emit_rex(REXW, Empty, dst);
     self.emitb(0xff);
     self.emit_modrm(_Operation(0), dst);
   }
 
   fn decq(&mut self, dst: Operand) {
-    self.emit_rex(REXW, dst, Empty);
+    self.emit_rex(REXW, Empty, dst);
     self.emitb(0xff);
     self.emit_modrm(_Operation(1), dst);
   }
@@ -266,14 +277,14 @@ impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
         self.emitb(0x05);
         self.emitl(l);
       },
-      (_, Byte(b)) => {
-        self.emit_rex(REXW, dst, src);
+      (_, Byte(b)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
         self.emitb(0x83);
         self.emit_modrm(_Operation(0), dst);
         self.emitb(b);
       },
-      (_, Long(l)) => {
-        self.emit_rex(REXW, dst, src);
+      (_, Long(l)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
         self.emitb(0x81);
         self.emit_modrm(_Operation(0), dst);
         self.emitl(l);
@@ -299,14 +310,14 @@ impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
         self.emitb(0x2d);
         self.emitl(l);
       },
-      (_, Byte(b)) => {
-        self.emit_rex(REXW, dst, src);
+      (_, Byte(b)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
         self.emitb(0x83);
         self.emit_modrm(_Operation(5), dst);
         self.emitb(b);
       },
-      (_, Long(l)) => {
-        self.emit_rex(REXW, dst, src);
+      (_, Long(l)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
         self.emitb(0x81);
         self.emit_modrm(_Operation(5), dst);
         self.emitl(l);
@@ -323,12 +334,186 @@ impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
     }
   }
 
+  fn divq(&mut self, src: Operand) {
+    assert!(src.is_rm());
+    self.emit_rex(REXW, Empty, src);
+    self.emitb(0xf7);
+    self.emit_modrm(_Operation(6), src);
+  }
+
+  fn mulq(&mut self, src: Operand) {
+    assert!(src.is_rm());
+    self.emit_rex(REXW, Empty, src);
+    self.emitb(0xf7);
+    self.emit_modrm(_Operation(4), src);
+  }
+
+  fn shlq(&mut self, dst: Operand, src: Operand) {
+    assert!(dst.is_rm());
+    match src {
+      Byte(b) => {
+        self.emit_rex(REXW, Empty, dst);
+        self.emitb(0xc1);
+        self.emit_modrm(_Operation(4), dst);
+        self.emitb(b);
+      },
+      _ => fail!()
+    }
+  }
+
+  fn shrq(&mut self, dst: Operand, src: Operand) {
+    assert!(dst.is_rm());
+    match src {
+      Byte(b) => {
+        self.emit_rex(REXW, Empty, dst);
+        self.emitb(0xc1);
+        self.emit_modrm(_Operation(5), dst);
+        self.emitb(b);
+      },
+      _ => fail!()
+    }
+  }
+
+  fn sarq(&mut self, dst: Operand, src: Operand) {
+    assert!(dst.is_rm());
+    match src {
+      Byte(b) => {
+        self.emit_rex(REXW, Empty, dst);
+        self.emitb(0xc1);
+        self.emit_modrm(_Operation(7), dst);
+        self.emitb(b);
+      },
+      _ => fail!()
+    }
+  }
+
+  fn andq(&mut self, dst: Operand, src: Operand) {
+    match (dst, src) {
+      (R(rax), Long(l)) => {
+        self.emit_rex(REXW, Empty, Empty);
+        self.emitb(0x25);
+        self.emitl(l);
+      },
+      (_, Byte(b)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
+        self.emitb(0x83);
+        self.emit_modrm(_Operation(4), dst);
+        self.emitb(b);
+      },
+      (_, Long(l)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
+        self.emitb(0x81);
+        self.emit_modrm(_Operation(4), dst);
+        self.emitl(l);
+      },
+      (R(_), _) if src.is_rm() => {
+        self.emit_rex(REXW, dst, src);
+        self.emitb(0x23);
+        self.emit_modrm(dst, src);
+      },
+      (_, R(_)) if dst.is_rm() => {
+        self.emit_rex(REXW, src, dst);
+        self.emitb(0x21);
+        self.emit_modrm(src, dst);
+      },
+      _ => fail!()
+    }
+  }
+
+  fn orq(&mut self, dst: Operand, src: Operand) {
+    match (dst, src) {
+      (R(rax), Long(l)) => {
+        self.emit_rex(REXW, Empty, Empty);
+        self.emitb(0x0d);
+        self.emitl(l);
+      },
+      (_, Byte(b)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
+        self.emitb(0x83);
+        self.emit_modrm(_Operation(1), dst);
+        self.emitb(b);
+      },
+      (_, Long(l)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
+        self.emitb(0x81);
+        self.emit_modrm(_Operation(1), dst);
+        self.emitl(l);
+      },
+      (R(_), _) if src.is_rm() => {
+        self.emit_rex(REXW, dst, src);
+        self.emitb(0x0b);
+        self.emit_modrm(dst, src);
+      },
+      (_, R(_)) if dst.is_rm() => {
+        self.emit_rex(REXW, src, dst);
+        self.emitb(0x0a);
+        self.emit_modrm(src, dst);
+      },
+      _ => fail!()
+    }
+  }
+
+  fn xorq(&mut self, dst: Operand, src: Operand) {
+    match (dst, src) {
+      (R(rax), Long(l)) => {
+        self.emit_rex(REXW, Empty, Empty);
+        self.emitb(0x35);
+        self.emitl(l);
+      },
+      (_, Byte(b)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
+        self.emitb(0x83);
+        self.emit_modrm(_Operation(6), dst);
+        self.emitb(b);
+      },
+      (_, Long(l)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
+        self.emitb(0x81);
+        self.emit_modrm(_Operation(6), dst);
+        self.emitl(l);
+      },
+      (R(_), _) if src.is_rm() => {
+        self.emit_rex(REXW, dst, src);
+        self.emitb(0x33);
+        self.emit_modrm(dst, src);
+      },
+      (_, R(_)) if dst.is_rm() => {
+        self.emit_rex(REXW, src, dst);
+        self.emitb(0x31);
+        self.emit_modrm(src, dst);
+      },
+      _ => fail!()
+    }
+  }
+
   fn ret(&mut self, r: Operand) {
     match r {
       Empty => self.emitb(0xc3),
       Word(w) => {
         self.emitb(0xc2);
         self.emitw(w as u16);
+      },
+      _ => fail!()
+    }
+  }
+
+  fn testq(&mut self, dst: Operand, src: Operand) {
+    match (dst, src) {
+      (R(rax), Long(l)) => {
+        self.emit_rex(REXW, Empty, Empty);
+        self.emitb(0xa9);
+        self.emitl(l);
+      },
+      (_, Long(l)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
+        self.emitb(0xf7);
+        self.emit_modrm(_Operation(0), dst);
+        self.emitl(l);
+      },
+      (_, R(_)) if dst.is_rm() => {
+        self.emit_rex(REXW, src, dst);
+        self.emitb(0x85);
+        self.emit_modrm(src, dst);
       },
       _ => fail!()
     }
@@ -341,14 +526,14 @@ impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
         self.emitb(0x3d);
         self.emitl(l);
       },
-      (_, Byte(b)) => {
-        self.emit_rex(REXW, dst, src);
+      (_, Byte(b)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
         self.emitb(0x83);
         self.emit_modrm(_Operation(7), dst);
         self.emitb(b);
       },
-      (_, Long(l)) => {
-        self.emit_rex(REXW, dst, src);
+      (_, Long(l)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
         self.emitb(0x81);
         self.emit_modrm(_Operation(7), dst);
         self.emitl(l);
@@ -387,5 +572,11 @@ impl<M: AsmBuffer+AsmX64Helper> AsmX64 for M {
       IfLessOrEqual => 0x8e
     });
     self.emit_use(l, RelocRelative, RelocLong, -4);
+  }
+
+  fn callq(&mut self, target: Operand) {
+    self.emit_rex(REXW, Empty, target);
+    self.emitb(0xff);
+    self.emit_modrm(_Operation(2), target);
   }
 }
