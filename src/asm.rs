@@ -1,4 +1,16 @@
-pub mod x64;
+pub mod x64 {
+  pub use asm::x64::base::*;
+  pub use asm::x64::basic::*;
+  pub use asm::x64::math::*;
+  pub use asm::x64::branching::*;
+  pub use asm::x64::fp::*;
+
+  pub mod base;
+  pub mod basic;
+  pub mod math;
+  pub mod branching;
+  pub mod fp;
+}
 
 #[deriving(Clone)]
 pub struct AsmOffset(uint);

@@ -95,6 +95,7 @@ impl Operand {
   fn is_dreg(&self) -> bool { match self { &D(_) => true, _ => false } }
   fn is_mem(&self) -> bool { match self { &M(_, _) => true, _ => false } }
   fn is_rm(&self) -> bool { self.is_reg() || self.is_mem() }
+  fn is_dm(&self) -> bool { self.is_dreg() || self.is_mem() }
 
   fn is_operation(&self) -> bool {
     match self { &_Operation(_) => true, _ => false }
