@@ -102,18 +102,16 @@ impl Operand {
 
   fn high(&self) -> u8 {
     match self {
-      &R(ref r) => r.high(),
+      &R(ref r) | &M(ref r, _) => r.high(),
       &D(ref d) => d.high(),
-      &M(ref r, _) => r.high(),
       _ => 0
     }
   }
 
   fn low(&self) -> u8 {
     match self {
-      &R(ref r) => r.low(),
+      &R(ref r) | &M(ref r, _) => r.low(),
       &D(ref d) => d.low(),
-      &M(ref r, _) => r.low(),
       &_Operation(op) => op & 7,
       _ => 0
     }
