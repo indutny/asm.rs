@@ -153,3 +153,38 @@ fn rex() {
     m.ret(Empty);
   }
 }
+
+#[test]
+fn fp() {
+  do run_test(13589, 5959) |m| {
+    m.pushq(R(rbp));
+    m.movq(R(rbp), R(rsp));
+
+    // x = arg
+    m.movq(R(rax), R(rsi));
+    m.cvtsi2sd(D(xmm1), R(rax));
+
+    // x /= 23
+    m.movq(R(rax), Long(23));
+    m.cvtsi2sd(D(xmm2), R(rax));
+    m.divsd(D(xmm1), D(xmm2));
+
+    // x += 5
+    m.movq(R(rax), Long(5));
+    m.cvtsi2sd(D(xmm2), R(rax));
+    m.addsd(D(xmm1), D(xmm2));
+
+    // x *= 10
+    m.movq(R(rax), Long(10));
+    m.cvtsi2sd(D(xmm2), R(rax));
+    m.mulsd(D(xmm1), D(xmm2));
+
+    // x = ceil(x)
+    m.roundsd(D(xmm1), D(xmm1), RoundUp);
+    m.cvtsd2si(R(rax), D(xmm1));
+
+    m.movq(R(rsp), R(rbp));
+    m.popq(R(rbp));
+    m.ret(Empty);
+  }
+}

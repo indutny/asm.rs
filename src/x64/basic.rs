@@ -3,7 +3,8 @@ use asm::x64::base::*;
 
 pub trait AsmX64Basic {
   fn movq(&mut self, dst: Operand, src: Operand);
-  fn movqzx(&mut self, dst: Operand, src: Operand);
+  fn movqzxb(&mut self, dst: Operand, src: Operand);
+  fn movqzxl(&mut self, dst: Operand, src: Operand);
   fn movq_proc(&mut self, dst: Operand, l: &mut Label);
   fn xchgq(&mut self, dst: Operand, src: Operand);
   fn pushq(&mut self, op: Operand);
@@ -30,6 +31,12 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64Basic for A {
         self.emit_modrm(_Operation(0), dst);
         self.emitl(l);
       },
+      (_, Long(l)) if dst.is_rm() => {
+        self.emit_rex(REXW, Empty, dst);
+        self.emitb(0xc7);
+        self.emit_modrm(_Operation(0), dst);
+        self.emitl(l);
+      },
       (R(_), Quad(q)) => {
         self.emit_rex(REXW, dst, src);
         self.emitb(0xb8 | dst.low());
@@ -39,21 +46,25 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64Basic for A {
     }
   }
 
-  fn movqzx(&mut self, dst: Operand, src: Operand) {
+  fn movqzxb(&mut self, dst: Operand, src: Operand) {
     match (dst, src) {
-      (R(_), Byte(b)) => {
+      (R(_), _) if src.is_rm() => {
         self.emit_rex(REXW, dst, src);
         self.emitb(0x0f);
         self.emitb(0xb6);
         self.emit_modrm(dst, src);
-        self.emitb(b);
       },
-      (R(_), Word(w)) => {
+      _ => fail!()
+    }
+  }
+
+  fn movqzxl(&mut self, dst: Operand, src: Operand) {
+    match (dst, src) {
+      (R(_), _) if src.is_rm() => {
         self.emit_rex(REXW, dst, src);
         self.emitb(0x0f);
         self.emitb(0xb7);
         self.emit_modrm(dst, src);
-        self.emitw(w);
       },
       _ => fail!()
     }
