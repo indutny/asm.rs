@@ -37,14 +37,14 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64FP for A {
     match (dst, src) {
       (D(_), _) if src.is_dm() => {
         self.emitb(0xf2);
-        self.emit_opt_rex(REX, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0x10);
         self.emit_modrm(dst, src);
       },
       (_, D(_)) if dst.is_dm() => {
         self.emitb(0xf2);
-        self.emit_opt_rex(REX, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0x11);
         self.emit_modrm(src, dst);
@@ -57,14 +57,14 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64FP for A {
     match (dst, src) {
       (D(_), _) if src.is_dm() => {
         self.emitb(0xf3);
-        self.emit_opt_rex(REX, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0x7e);
         self.emit_modrm(dst, src);
       },
       (_, D(_)) if dst.is_dm() => {
         self.emitb(0x66);
-        self.emit_opt_rex(REX, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0xd6);
         self.emit_modrm(src, dst);
@@ -77,7 +77,7 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64FP for A {
     match (dst, src) {
       (D(_), _) if src.is_dm() => {
         self.emitb(0xf2);
-        self.emit_opt_rex(REX, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0x58);
         self.emit_modrm(dst, src);
@@ -90,7 +90,7 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64FP for A {
     match (dst, src) {
       (D(_), _) if src.is_dm() => {
         self.emitb(0xf2);
-        self.emit_opt_rex(REX, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x05);
         self.emitb(0xfc);
         self.emit_modrm(dst, src);
@@ -103,7 +103,7 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64FP for A {
     match (dst, src) {
       (D(_), _) if src.is_dm() => {
         self.emitb(0xf2);
-        self.emit_opt_rex(REX, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0x59);
         self.emit_modrm(dst, src);
@@ -116,7 +116,7 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64FP for A {
     match (dst, src) {
       (D(_), _) if src.is_dm() => {
         self.emitb(0xf2);
-        self.emit_opt_rex(REX, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0x5e);
         self.emit_modrm(dst, src);
@@ -129,7 +129,7 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64FP for A {
     match (dst, src) {
       (D(_), _) if src.is_dm() => {
         self.emitb(0x66);
-        self.emit_opt_rex(REX, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0x54);
         self.emit_modrm(dst, src);
@@ -142,7 +142,7 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64FP for A {
     match (dst, src) {
       (D(_), _) if src.is_dm() => {
         self.emitb(0x66);
-        self.emit_opt_rex(REX, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0x56);
         self.emit_modrm(dst, src);
@@ -155,7 +155,7 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64FP for A {
     match (dst, src) {
       (D(_), _) if src.is_dm() => {
         self.emitb(0x66);
-        self.emit_opt_rex(REXW, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0x57);
         self.emit_modrm(dst, src);
@@ -207,7 +207,7 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64FP for A {
     match (dst, src) {
       (D(_), _) if src.is_dm() => {
         self.emitb(0x66);
-        self.emit_opt_rex(REXW, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0x3a);
         self.emitb(0x0b);
@@ -223,7 +223,7 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64FP for A {
     match (dst, src) {
       (D(_), _) if src.is_dm() => {
         self.emitb(0x66);
-        self.emit_opt_rex(REXW, dst, src);
+        self.emit_opt_rex(dst, src);
         self.emitb(0x0f);
         self.emitb(0x2e);
         self.emit_modrm(dst, src);

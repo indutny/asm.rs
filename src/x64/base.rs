@@ -72,7 +72,7 @@ pub enum REXKind {
 pub trait AsmX64Helper {
   fn emit_modrm(&mut self, r: Operand, rm: Operand);
   fn emit_rex(&mut self, kind: REXKind, r: Operand, rm: Operand);
-  fn emit_opt_rex(&mut self, kind: REXKind, r: Operand, rm: Operand);
+  fn emit_opt_rex(&mut self, r: Operand, rm: Operand);
 }
 
 pub trait AsmX64 {
@@ -152,9 +152,9 @@ impl<M: AsmBuffer> AsmX64Helper for M {
     } | (r.high() << 2) | rm.high());
   }
 
-  fn emit_opt_rex(&mut self, kind: REXKind, r: Operand, rm: Operand) {
+  fn emit_opt_rex(&mut self, r: Operand, rm: Operand) {
     if (r.high() != 0 || rm.high() != 0) {
-      self.emit_rex(kind, r, rm);
+      self.emit_rex(REX, r, rm);
     }
   }
 }

@@ -4,6 +4,7 @@ use asm::x64::base::*;
 pub trait AsmX64Branching {
   fn testq(&mut self, dst: Operand, src: Operand);
   fn cmpq(&mut self, dst: Operand, src: Operand);
+  fn jmpq(&mut self, target: Operand);
   fn jmpl(&mut self, l: &mut Label);
   fn jccl(&mut self, c: JumpCondition, l: &mut Label);
   fn callq(&mut self, target: Operand);
@@ -63,6 +64,12 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64Branching for A {
       },
       _ => fail!()
     }
+  }
+
+  fn jmpq(&mut self, target: Operand) {
+    self.emit_opt_rex(Empty, target);
+    self.emitb(0xff);
+    self.emit_modrm(Empty, target);
   }
 
   fn jmpl(&mut self, l: &mut Label) {
