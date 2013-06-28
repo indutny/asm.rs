@@ -6,13 +6,6 @@ use common::*;
 mod asm;
 mod common;
 
-fn run_test(arg: uint, expected: uint, test: &fn(m: &mut Asm)) {
-  let mut m = ~Asm::new();
-  test(m);
-
-  assert!(m.execute(arg) == expected);
-}
-
 #[test]
 fn in_and_out() {
   do run_test(13589, 13589) |m| {

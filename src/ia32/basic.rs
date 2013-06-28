@@ -1,49 +1,44 @@
 use asm::*;
-use asm::x64::base::*;
+use asm::ia32::base::*;
 
-pub trait AsmX64Basic {
-  fn movq(&mut self, dst: Operand, src: Operand);
-  fn movqzxb(&mut self, dst: Operand, src: Operand);
-  fn movqzxl(&mut self, dst: Operand, src: Operand);
-  fn movq_proc(&mut self, dst: Operand, l: &mut Label);
-  fn xchgq(&mut self, dst: Operand, src: Operand);
-  fn pushq(&mut self, op: Operand);
-  fn popq(&mut self, op: Operand);
+pub trait AsmIA32Basic {
+  fn movl(&mut self, dst: Operand, src: Operand);
+  fn movlzxb(&mut self, dst: Operand, src: Operand);
+  fn movlzxl(&mut self, dst: Operand, src: Operand);
+  fn movl_proc(&mut self, dst: Operand, l: &mut Label);
+  fn xchgl(&mut self, dst: Operand, src: Operand);
+  fn pushl(&mut self, op: Operand);
+  fn popl(&mut self, op: Operand);
   fn ret(&mut self, r: Operand);
 }
 
-impl<A: AsmBuffer+AsmX64Helper> AsmX64Basic for A {
-  fn movq(&mut self, dst: Operand, src: Operand) {
+impl<A: AsmBuffer+AsmIA32Helper> AsmIA32Basic for A {
+  fn movl(&mut self, dst: Operand, src: Operand) {
     match (dst, src) {
       (R(_), _) if src.is_rm() => {
-        self.emit_rex(REXW, dst, src);
         self.emitb(0x8b);
         self.emit_modrm(dst, src);
       },
       (_, R(_)) if dst.is_rm() => {
-        self.emit_rex(REXW, src, dst);
         self.emitb(0x89);
         self.emit_modrm(src, dst);
       },
       (_, Long(l)) if dst.is_rm() => {
-        self.emit_rex(REXW, Empty, dst);
         self.emitb(0xc7);
         self.emit_modrm(_Operation(0), dst);
         self.emitl(l);
       },
-      (R(_), Quad(q)) => {
-        self.emit_rex(REXW, dst, src);
-        self.emitb(0xb8 | dst.low());
-        self.emitq(q);
+      (R(_), Long(l)) => {
+        self.emitb(0xb8 | dst.val());
+        self.emitl(l);
       },
       _ => fail!()
     }
   }
 
-  fn movqzxb(&mut self, dst: Operand, src: Operand) {
+  fn movlzxb(&mut self, dst: Operand, src: Operand) {
     match (dst, src) {
       (R(_), _) if src.is_rm() => {
-        self.emit_rex(REXW, dst, src);
         self.emitb(0x0f);
         self.emitb(0xb6);
         self.emit_modrm(dst, src);
@@ -52,10 +47,9 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64Basic for A {
     }
   }
 
-  fn movqzxl(&mut self, dst: Operand, src: Operand) {
+  fn movlzxl(&mut self, dst: Operand, src: Operand) {
     match (dst, src) {
       (R(_), _) if src.is_rm() => {
-        self.emit_rex(REXW, dst, src);
         self.emitb(0x0f);
         self.emitb(0xb7);
         self.emit_modrm(dst, src);
@@ -64,34 +58,29 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64Basic for A {
     }
   }
 
-  fn movq_proc(&mut self, dst: Operand, l: &mut Label) {
+  fn movl_proc(&mut self, dst: Operand, l: &mut Label) {
     match dst {
       R(_) => {
-        self.emit_rex(REXW, dst, Empty);
-        self.emitb(0xb8 | dst.low());
-        self.emit_use(l, RelocAbsolute, RelocQuad, 0);
+        self.emitb(0xb8 | dst.val());
+        self.emit_use(l, RelocAbsolute, RelocLong, 0);
       },
       _ => fail!()
     }
   }
 
-  fn xchgq(&mut self, dst: Operand, src: Operand) {
+  fn xchgl(&mut self, dst: Operand, src: Operand) {
     match (dst, src) {
-      (R(rax), R(_)) => {
-        self.emit_rex(REXW, dst, src);
-        self.emitb(0x90 | src.low());
+      (R(eax), R(_)) => {
+        self.emitb(0x90 | src.val());
       },
-      (R(_), R(rax)) => {
-        self.emit_rex(REXW, src, dst);
-        self.emitb(0x90 | dst.low());
+      (R(_), R(eax)) => {
+        self.emitb(0x90 | dst.val());
       },
       (R(_), _) if src.is_rm() => {
-        self.emit_rex(REXW, dst, src);
         self.emitb(0x87);
         self.emit_modrm(dst, src);
       },
       (_, R(_)) if src.is_rm() => {
-        self.emit_rex(REXW, src, dst);
         self.emitb(0x87);
         self.emit_modrm(src, dst);
       },
@@ -99,15 +88,13 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64Basic for A {
     }
   }
 
-  fn pushq(&mut self, op: Operand) {
+  fn pushl(&mut self, op: Operand) {
     match op {
       R(_) => {
-        self.emit_opt_rex(Empty, op);
         self.emitb(0xff);
         self.emit_modrm(_Operation(6), op);
       },
       M(_, _) => {
-        self.emit_opt_rex(Empty, op);
         self.emitb(0xff);
         self.emit_modrm(_Operation(6), op);
       },
@@ -123,14 +110,12 @@ impl<A: AsmBuffer+AsmX64Helper> AsmX64Basic for A {
     }
   }
 
-  fn popq(&mut self, op: Operand) {
+  fn popl(&mut self, op: Operand) {
     match op {
       R(_) => {
-        self.emit_opt_rex(Empty, op);
-        self.emitb(0x58 | op.low());
+        self.emitb(0x58 | op.val());
       },
       M(_, _) => {
-        self.emit_opt_rex(Empty, op);
         self.emitb(0x8f);
         self.emit_modrm(_Operation(0), op);
       },

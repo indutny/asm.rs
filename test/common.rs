@@ -1,5 +1,5 @@
 use asm::*;
-use std::libc::*;
+use std::os;
 use std::ptr;
 use std::cast;
 use std::vec;
@@ -38,40 +38,27 @@ impl AsmBuffer for Asm {
   }
 }
 
-fn round_up(x: c_long, f: c_long) -> c_long {
-  let r = if x % f == 0 {
-    x
-  } else {
-    x + f - (x % f)
-  };
-  if (r == 0) {
-    f
-  } else {
-    r
-  }
-}
-
 impl Asm {
   pub fn new() -> Asm {
     Asm { buffer: ~[], infos: ~[] }
   }
 
   pub fn execute(&self, arg: uint) -> uint {
-    let f: extern "Rust" fn(uint) -> uint = unsafe {
-      let len = round_up(self.buffer.len() as c_long,
-                         sysconf(_SC_PAGESIZE));
-      let addr = mmap(ptr::null(),
-                      len as size_t,
-                      PROT_READ | PROT_WRITE | PROT_EXEC,
-                      MAP_ANON | MAP_PRIVATE,
-                      -1,
-                      0);
-      assert!(addr != MAP_FAILED);
-      ptr::copy_memory(cast::transmute(addr),
+    let addr = match os::MmapChunk::new(self.buffer.len(), ~[
+      os::MmapReadable,
+      os::MmapWritable,
+      os::MmapExecutable
+    ]) {
+      Ok(r) => r,
+      Err(_) => fail!()
+    };
+
+    unsafe {
+      let data: *mut u8 = cast::transmute(addr.data);
+      ptr::copy_memory(data,
                        vec::raw::to_ptr(self.buffer),
                        self.buffer.len());
 
-      let bmap: *mut u8 = cast::transmute(addr);
       for self.infos.iter().advance |info| {
         let AsmOffset(from) = info.from;
         let AsmOffset(to) = info.to;
@@ -79,8 +66,8 @@ impl Asm {
         match info.kind {
           RelocAbsolute => {
             assert!(info.size == RelocQuad);
-            let to_abs = (addr as u64) + to as u64;
-            let p: *mut u64 = cast::transmute(bmap.offset(from));
+            let to_abs = (data as u64) + to as u64;
+            let p: *mut u64 = cast::transmute(data.offset(from));
             *p = to_abs;
           },
           RelocRelative => {
@@ -88,31 +75,36 @@ impl Asm {
             match info.size {
               RelocByte => {
                 assert!(-127 <= delta && delta <= 128);
-                let p: *mut u8 = cast::transmute(bmap.offset(from));
+                let p: *mut u8 = cast::transmute(data.offset(from));
                 *p = delta as u8;
               },
               RelocWord => {
                 assert!(-32767 <= delta && delta <= 32768);
-                let p: *mut u16 = cast::transmute(bmap.offset(from));
+                let p: *mut u16 = cast::transmute(data.offset(from));
                 *p = delta as u16;
               },
               RelocLong => {
                 assert!(-8388607 <= delta && delta <= 8388608);
-                let p: *mut u32 = cast::transmute(bmap.offset(from));
+                let p: *mut u32 = cast::transmute(data.offset(from));
                 *p = delta as u32;
               },
               RelocQuad => {
-                assert!(-2147483647 <= delta && delta <= 2147483648);
-                let p: *mut u64 = cast::transmute(bmap.offset(from));
+                let p: *mut u64 = cast::transmute(data.offset(from));
                 *p = delta as u64;
               }
             }
           }
         }
       };
-
-      cast::transmute(addr)
-    };
-    f(arg)
+      let f: extern "Rust" fn(uint) -> uint = cast::transmute(data);
+      f(arg)
+    }
   }
+}
+
+pub fn run_test(arg: uint, expected: uint, test: &fn(m: &mut Asm)) {
+  let mut m = ~Asm::new();
+  test(m);
+
+  assert!(m.execute(arg) == expected);
 }

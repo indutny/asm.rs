@@ -5,6 +5,11 @@ TEST_BINARY ?= ./run-tests
 
 SRC ?=
 SRC += src/asm.rs
+SRC += src/ia32/base.rs
+SRC += src/ia32/basic.rs
+SRC += src/ia32/math.rs
+SRC += src/ia32/branching.rs
+SRC += src/ia32/fp.rs
 SRC += src/x64/base.rs
 SRC += src/x64/basic.rs
 SRC += src/x64/math.rs

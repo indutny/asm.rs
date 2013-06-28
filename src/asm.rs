@@ -1,3 +1,17 @@
+pub mod ia32 {
+  pub use asm::ia32::base::*;
+  pub use asm::ia32::basic::*;
+  pub use asm::ia32::math::*;
+  pub use asm::ia32::branching::*;
+  pub use asm::ia32::fp::*;
+
+  pub mod base;
+  pub mod basic;
+  pub mod math;
+  pub mod branching;
+  pub mod fp;
+}
+
 pub mod x64 {
   pub use asm::x64::base::*;
   pub use asm::x64::basic::*;
