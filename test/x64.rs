@@ -2,11 +2,8 @@ use asm::*;
 use asm::x64::*;
 use common::*;
 
-#[path="../src/asm.rs"]
-mod asm;
-mod common;
-
 #[test]
+#[cfg(target_arch = "x86_64")]
 fn in_and_out() {
   do run_test(13589, 13589) |m| {
     m.pushq(R(rbp));
@@ -21,6 +18,7 @@ fn in_and_out() {
 }
 
 #[test]
+#[cfg(target_arch = "x86_64")]
 fn math() {
   do run_test(13589, 40789) |m| {
     m.pushq(R(rbp));
@@ -45,6 +43,7 @@ fn math() {
 }
 
 #[test]
+#[cfg(target_arch = "x86_64")]
 fn branching() {
   do run_test(100, 400) |m| {
     m.pushq(R(rbp));
@@ -77,6 +76,7 @@ fn branching() {
 }
 
 #[test]
+#[cfg(target_arch = "x86_64")]
 fn proc() {
   do run_test(0, 123) |m| {
     let mut proc = Label::new();
@@ -107,6 +107,7 @@ fn proc() {
 }
 
 #[test]
+#[cfg(target_arch = "x86_64")]
 fn rex() {
   do run_test(0x1234, 0x1234) |m| {
     m.pushq(R(rbp));
@@ -148,6 +149,7 @@ fn rex() {
 }
 
 #[test]
+#[cfg(target_arch = "x86_64")]
 fn fp() {
   do run_test(13589, 5959) |m| {
     m.pushq(R(rbp));

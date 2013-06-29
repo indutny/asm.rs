@@ -18,7 +18,9 @@ SRC += src/x64/fp.rs
 
 TEST_SRC ?=
 TEST_SRC += test/common.rs
-TEST_SRC += test/runner.rs
+TEST_SRC += test/ia32.rs
+TEST_SRC += test/x64.rs
+TEST_SRC += test/mod.rs
 
 all: $(TEST_BINARY)
 	$(TEST_BINARY)
@@ -27,7 +29,7 @@ clean:
 	rm -f $(TEST_BINARY)
 
 $(TEST_BINARY): $(SRC) $(TEST_SRC)
-	$(RUSTC) $(RUSTFLAGS) --test test/runner.rs -o $@
+	$(RUSTC) $(RUSTFLAGS) --test test/mod.rs -o $@
 
 
 .PHONY: all clean
