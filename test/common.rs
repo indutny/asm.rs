@@ -65,10 +65,19 @@ impl Asm {
 
         match info.kind {
           RelocAbsolute => {
-            assert!(info.size == RelocQuad);
-            let to_abs = (data as u64) + to as u64;
-            let p: *mut u64 = cast::transmute(data.offset(from));
-            *p = to_abs;
+            match info.size {
+              RelocQuad => {
+                let to_abs = (data as u64) + to as u64;
+                let p: *mut u64 = cast::transmute(data.offset(from));
+                *p = to_abs;
+              },
+              RelocLong => {
+                let to_abs = (data as u32) + to as u32;
+                let p: *mut u32 = cast::transmute(data.offset(from));
+                *p = to_abs;
+              },
+              _ => fail!()
+            }
           },
           RelocRelative => {
             let delta = (to as int) - (from as int) + info.nudge;

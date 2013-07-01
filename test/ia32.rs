@@ -9,7 +9,7 @@ fn in_and_out() {
     m.pushl(R(ebp));
     m.movl(R(ebp), R(esp));
 
-    m.movl(R(eax), R(esi));
+    m.movl(R(eax), M(ebp, 8 + 4));
 
     m.movl(R(esp), R(ebp));
     m.popl(R(ebp));
@@ -28,7 +28,8 @@ fn math() {
     m.subl(R(esp), Byte(8));
 
     // And work with it
-    m.movl(M(ebp, -8), R(esi));
+    m.movl(R(eax), M(ebp, 8 + 4));
+    m.movl(M(ebp, -8), R(eax));
     m.addl(M(ebp, -8), Long(5));
     m.movl(R(ebx), M(ebp, -8));
     m.addl(R(ebx), M(ebp, -8));
@@ -51,7 +52,7 @@ fn branching() {
 
     // Initialize output
     m.movl(R(eax), Long(0));
-    m.movl(R(ecx), R(esi));
+    m.movl(R(ecx), M(ebp, 8 + 4));
 
     let mut loop_start = Label::new();
     let mut done = Label::new();
@@ -114,7 +115,7 @@ fn fp() {
     m.movl(R(ebp), R(esp));
 
     // x = arg
-    m.movl(R(eax), R(esi));
+    m.movl(R(eax), M(ebp, 8 + 4));
     m.cvtsi2sd(D(xmm1), R(eax));
 
     // x /= 23
