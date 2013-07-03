@@ -44,18 +44,17 @@ impl Asm {
   }
 
   pub fn execute(&self, arg: uint) -> uint {
-    let addr = match os::MmapChunk::new(self.buffer.len(), ~[
-      os::MmapReadable,
-      os::MmapWritable,
-      os::MmapExecutable
+    let map = match os::MemoryMap::new(self.buffer.len(), ~[
+      os::MapReadable,
+      os::MapWritable,
+      os::MapExecutable
     ]) {
       Ok(r) => r,
-      Err(_) => fail!()
+      Err(err) => fail!(err.to_str())
     };
 
     unsafe {
-      let data: *mut u8 = cast::transmute(addr.data);
-      ptr::copy_memory(data,
+      ptr::copy_memory(map.data,
                        vec::raw::to_ptr(self.buffer),
                        self.buffer.len());
 
@@ -67,13 +66,13 @@ impl Asm {
           RelocAbsolute => {
             match info.size {
               RelocQuad => {
-                let to_abs = (data as u64) + to as u64;
-                let p: *mut u64 = cast::transmute(data.offset(from));
+                let to_abs = (map.data as u64) + to as u64;
+                let p: *mut u64 = cast::transmute(map.data.offset(from));
                 *p = to_abs;
               },
               RelocLong => {
-                let to_abs = (data as u32) + to as u32;
-                let p: *mut u32 = cast::transmute(data.offset(from));
+                let to_abs = (map.data as u32) + to as u32;
+                let p: *mut u32 = cast::transmute(map.data.offset(from));
                 *p = to_abs;
               },
               _ => fail!()
@@ -84,28 +83,28 @@ impl Asm {
             match info.size {
               RelocByte => {
                 assert!(-127 <= delta && delta <= 128);
-                let p: *mut u8 = cast::transmute(data.offset(from));
+                let p: *mut u8 = cast::transmute(map.data.offset(from));
                 *p = delta as u8;
               },
               RelocWord => {
                 assert!(-32767 <= delta && delta <= 32768);
-                let p: *mut u16 = cast::transmute(data.offset(from));
+                let p: *mut u16 = cast::transmute(map.data.offset(from));
                 *p = delta as u16;
               },
               RelocLong => {
                 assert!(-8388607 <= delta && delta <= 8388608);
-                let p: *mut u32 = cast::transmute(data.offset(from));
+                let p: *mut u32 = cast::transmute(map.data.offset(from));
                 *p = delta as u32;
               },
               RelocQuad => {
-                let p: *mut u64 = cast::transmute(data.offset(from));
+                let p: *mut u64 = cast::transmute(map.data.offset(from));
                 *p = delta as u64;
               }
             }
           }
         }
       };
-      let f: extern "Rust" fn(uint) -> uint = cast::transmute(data);
+      let f: extern "Rust" fn(uint) -> uint = cast::transmute(map.data);
       f(arg)
     }
   }
