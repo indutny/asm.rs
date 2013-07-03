@@ -9,7 +9,7 @@ pub enum Operand {
   Byte(u8),
   Word(u16),
   Long(u32),
-  Quad(u64),
+  Quad(u64)
 }
 
 pub enum Register {
